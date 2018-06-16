@@ -1,0 +1,45 @@
+import { observable } from 'mobx';
+import { PostModel } from 'app/models';
+import { getWeb3Instance } from 'app/utils/web3';
+
+export class PostStore {
+  public static KEY = 'post';
+
+  constructor(fixtures: PostModel[]) {
+    this.posts = fixtures;
+  }
+
+  @observable public posts: Array<PostModel>;
+
+  async loadPost() {
+    const web3 = getWeb3Instance();
+    const coinbase = await web3.eth.getCoinbase();
+    const contract = new web3.eth.Contract(
+      PostModel.ABI,
+      '0x8b6722ca8bce239c855dde86384c799bf5818108'
+    );
+    window.contract= contract;
+    window.coinbase = coinbase;
+    const posts = contract.events.Posting(
+      { fromBlock: 0, filter: { author: coinbase } },
+      (err, res) => {
+        console.log({ err, res });
+      }
+    );
+  }
+
+  async createPost(post: PostModel) {
+    const web3 = getWeb3Instance();
+    const contract = new web3.eth.Contract(
+      PostModel.ABI,
+      '0x8b6722ca8bce239c855dde86384c799bf5818108'
+    );
+    web3.eth.getCoinbase().then((coinbase) =>
+      contract.methods
+        .create(post.title, post.body)
+        .send({ from: coinbase })
+        .then(console.log)
+    );
+    // this.posts.push(post);
+  }
+}
